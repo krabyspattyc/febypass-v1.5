@@ -1,0 +1,215 @@
+-- Initialize Player and Screen GUI
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local mouse = player:GetMouse()
+
+-- Main GUI Setup
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = player.PlayerGui
+
+-- Main Frame
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 350, 0, 650)
+mainFrame.Position = UDim2.new(0, 50, 0, 50)
+mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+mainFrame.BackgroundTransparency = 0.5
+mainFrame.Parent = screenGui
+
+-- Create Movable Frame
+local dragging, dragInput, mousePos, framePos
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragInput = input
+        mousePos = input.Position
+        framePos = mainFrame.Position
+    end
+end)
+
+mainFrame.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - mousePos
+        mainFrame.Position = UDim2.new(framePos.X.Scale, framePos.X.Offset + delta.X, framePos.Y.Scale, framePos.Y.Offset + delta.Y)
+    end
+end)
+
+mainFrame.InputEnded:Connect(function(input)
+    if input == dragInput then
+        dragging = false
+    end
+end)
+
+-- Add buttons to the frame
+local function createButton(text, position, action)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0, 280, 0, 40)
+    button.Position = position
+    button.Text = text
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    button.Parent = mainFrame
+
+    button.MouseButton1Click:Connect(action)
+end
+
+-- Variables for features
+local flying = false
+local noclip = false
+local spinning = false
+local chatSpamEnabled = false
+local speed = 16
+local bodyVelocity
+local godModeEnabled = false
+local invisibleEnabled = false
+local walkingOnWater = false
+local infYieldEnabled = false
+
+-- No Gravity
+local function toggleNoGravity()
+    if not flying then
+        flying = true
+        bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.MaxForce = Vector3.new(400000, 400000, 400000)
+        bodyVelocity.Velocity = Vector3.new(0, 50, 0)
+        bodyVelocity.Parent = character:WaitForChild("HumanoidRootPart")
+    else
+        if bodyVelocity then
+            bodyVelocity:Destroy()
+            bodyVelocity = nil
+        end
+        flying = false
+    end
+end
+
+-- Noclip
+local function toggleNoclip()
+    noclip = not noclip
+    for _, part in pairs(character:GetChildren()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = not noclip
+        end
+    end
+end
+
+-- Spin
+local function toggleSpin()
+    spinning = not spinning
+    local spinSpeed = math.rad(10)
+    while spinning do
+        character:SetPrimaryPartCFrame(character.HumanoidRootPart.CFrame * CFrame.Angles(0, spinSpeed, 0))
+        wait(0.1)
+    end
+end
+
+-- Chat Spam
+local function chatSpam()
+    local message = "Spam message"
+    while chatSpamEnabled do
+        game.ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message, "All")
+        wait(0.5) -- Adjust delay between messages
+    end
+end
+
+-- Force Field (Added)
+local function toggleForceField()
+    local forceField = character:FindFirstChild("ForceField")
+    if forceField then
+        forceField:Destroy()
+    else
+        forceField = Instance.new("ForceField")
+        forceField.Parent = character
+    end
+end
+
+-- God Mode
+local function toggleGodMode()
+    godModeEnabled = not godModeEnabled
+    character.Humanoid.Health = godModeEnabled and character.Humanoid.MaxHealth or character.Humanoid.Health
+    character.Humanoid.TakeDamage = godModeEnabled and function() end or character.Humanoid.TakeDamage
+end
+
+-- Invisible
+local function toggleInvisible()
+    invisibleEnabled = not invisibleEnabled
+    for _, part in pairs(character:GetChildren()) do
+        if part:IsA("BasePart") then
+            part.Transparency = invisibleEnabled and 1 or 0
+        end
+    end
+end
+
+-- Walk on Water
+local function toggleWalkOnWater()
+    walkingOnWater = not walkingOnWater
+    character.Humanoid.PlatformStand = walkingOnWater
+end
+
+-- Admin Commands (Inf Yield)
+local function toggleAdminCommands()
+    infYieldEnabled = not infYieldEnabled
+    if infYieldEnabled then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+    end
+end
+
+-- Explode Character
+local function explodeCharacter()
+    local explosion = Instance.new("Explosion")
+    explosion.Position = character.HumanoidRootPart.Position
+    explosion.BlastRadius = 10
+    explosion.BlastPressure = 5000
+    explosion.Parent = workspace
+    explosion.ExplosionType = Enum.ExplosionType.NoCraters
+    explosion.Hit:Connect(function(hit)
+        if hit.Parent == character then
+            character:BreakJoints() -- Explodes the character
+        end
+    end)
+end
+
+-- Create Main GUI buttons
+createButton("No Gravity", UDim2.new(0, 10, 0, 50), toggleNoGravity)
+createButton("Noclip", UDim2.new(0, 10, 0, 100), toggleNoclip)
+createButton("Spin", UDim2.new(0, 10, 0, 150), toggleSpin)
+createButton("Chat Spam", UDim2.new(0, 10, 0, 200), function()
+    chatSpamEnabled = not chatSpamEnabled
+    if chatSpamEnabled then
+        chatSpam()
+    end
+end)
+createButton("Force Field", UDim2.new(0, 10, 0, 250), toggleForceField)
+createButton("God Mode", UDim2.new(0, 10, 0, 300), toggleGodMode)
+createButton("Invisible", UDim2.new(0, 10, 0, 350), toggleInvisible)
+createButton("Walk on Water", UDim2.new(0, 10, 0, 400), toggleWalkOnWater)
+createButton("Admin Commands", UDim2.new(0, 10, 0, 450), toggleAdminCommands)
+createButton("Explode Character", UDim2.new(0, 10, 0, 500), explodeCharacter)
+
+-- Add Destroy Button
+local function createDestroyButton()
+    local destroyButton = Instance.new("TextButton")
+    destroyButton.Size = UDim2.new(0, 280, 0, 40)
+    destroyButton.Position = UDim2.new(0, 10, 0, 550)
+    destroyButton.Text = "Destroy GUI"
+    destroyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    destroyButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    destroyButton.Parent = mainFrame
+
+    destroyButton.MouseButton1Click:Connect(function()
+        screenGui:Destroy()
+    end)
+end
+
+createDestroyButton()
+
+-- Keep the GUI alive even after death (Ensure GUI is always in PlayerGui)
+if not screenGui.Parent then
+    screenGui.Parent = player.PlayerGui
+end
+
+-- Add event to prevent GUI from disappearing on respawn
+player.CharacterAdded:Connect(function()
+    -- Re-create the GUI every time the character is respawned (GUI stays persistent)
+    if not screenGui.Parent then
+        screenGui.Parent = player.PlayerGui
+    end
+end)
